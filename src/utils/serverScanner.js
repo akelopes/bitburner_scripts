@@ -1,0 +1,20 @@
+/** @param {import("..").NS} ns */
+export function collectServers(ns, srv, srvRepo) {
+	let srvList = ns.scan(srv);
+	srvList = srvList.filter(e => !e.includes('home') && !e.includes('pserv'));
+	srvList = srvList.filter(e => !srvRepo.includes(e));
+	srvRepo.push.apply(srvRepo, srvList);
+	srvList.forEach(function (s) {
+		srvRepo = collectServers(ns, s, srvRepo);
+	})
+	return srvRepo;
+}
+
+/** @param {import("..").NS} ns */
+export function listHackedServersByMaxMoney(ns) {
+	let targets = collectServers(ns, 'home', []);
+	targets = targets.filter(s => ns.hasRootAccess(s));
+	targets = targets.sort((a, b) => ns.getServerMaxMoney(b) - ns.getServerMaxMoney(a));
+
+	return targets;
+}
