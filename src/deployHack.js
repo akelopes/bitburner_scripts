@@ -1,5 +1,5 @@
 import { argParser } from './utils/argParser.js';
-import { listHackedServersByMaxMoney } from './utils/serverScanner.js';
+import { collectServers, listHackedServersByMaxMoney } from './utils/serverScanner.js';
 
 /** @param {import(".").NS} ns */
 function _getAllServers(ns) {
