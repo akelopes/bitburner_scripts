@@ -16,9 +16,9 @@ I did not want to create an autopilot, but rather have a more active role while 
 The main strategy used was to start out by running `spiderCracker.js` to kick start the hacking of servers.
 From there, I will either activate `infiltrate.js` to infiltrate companies for fast money and faction rep, or start training
 my hacking level with either `levelUpHacking.js` or simply training on university depending on the bitNode. I will also
-manualy buy port apps to liberate the cracking of servers.
+manually buy port apps to liberate the cracking of servers.
 
-Goals change according to BitNote, but generally teh early game goal is to max out private servers at 8Tb RAM, while
+Goals change according to BitNote, but generally the early game goal is to max out private servers at 8Tb RAM, while
 backdooring faction servers and farming up faction rep through infiltration. Once there, I switch gears to maxing out
 the requirements to beat the BitNode.
 
@@ -26,7 +26,7 @@ the requirements to beat the BitNode.
 
 #### deployHack.js
 
-Used to deploy a calculated distributino of grow, weaken and hack commands that will loop across all servers to get
+Used to deploy a calculated distribution of grow, weaken and hack commands that will loop across all servers to get
 money from the targeted server.
 
 Scripts are deployed following an arbitrary proportion of 10 `grow` threads and 2 `weaken` threads for each `hack` thread. The
@@ -70,7 +70,7 @@ any server it can. A terminal message will be output for every server it cracks 
 
 `run purchaseServer.js [RamPotency]`
 
-An automation to buy and upgrade private servers. It runs on a loop, initially buying servers with 8GB ram until it reachs
+An automation to buy and upgrade private servers. It runs on a loop, initially buying servers with 8GB ram until it reaches
 the limit of servers. Once the limit it reached, it will raise the ram based on the amount you can buy for all servers.
 The default maximum RAM is 16Tb `ramMaxPotency = 14`. I found it enough for the first phases of a bitNode. If you want to
 go higher, just run the command with the factor you want to upgrade to (game maximum being 20).
