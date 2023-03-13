@@ -55,38 +55,32 @@ export async function main(ns) {
         }
 
         let serversToUpgrade = ns.getPurchasedServers();
-        for (let i in [...Array(serversMaxRamPotency + 1).keys()]) {
-            if (ns.getServerMoneyAvailable('home') / ns.getPurchasedServerCost(Math.pow(2, i)) >= 24) {
-                ramPotency = parseInt(i) > ramPotency ? i : ramPotency;
-            }
+        serversToUpgrade = serversToUpgrade.filter(s => ns.getServerMaxRam(s) < Math.pow(2, ramPotency));
+
+        while (serversToUpgrade.length == 0) {
+            ramPotency += 1;
+            serversToUpgrade = ns.getPurchasedServers();
+            serversToUpgrade = serversToUpgrade.filter(s => ns.getServerMaxRam(s) < Math.pow(2, ramPotency));
         }
+
         ram = Math.pow(2, ramPotency);
-        serversToUpgrade = serversToUpgrade.filter(s => ns.getServerMaxRam(s) < ram);
 
         let maxServersToUpgrade = serversToUpgrade.length;
         let serversUpgraded = 0;
-        if (serversToUpgrade.length > 0) {
-            ns.print(`Upgrading servers to ${ram} GB RAM.`)
-            while (serversUpgraded < maxServersToUpgrade) {
-                if (canBuy()) {
-                    let serverName = serversToUpgrade.shift();
-                    if (!serverName) { break; }
+        ns.print(`Upgrading servers to ${ram} GB RAM.`)
+        while (serversUpgraded < maxServersToUpgrade) {
+            if (canBuy()) {
+                let serverName = serversToUpgrade.shift();
+                if (!serverName) { break; }
 
-                    if (ns.getServerMaxRam(serverName) < ram) {
-                        await upgradeServer(ns, serverName, ram);
-                    }
-                    serversUpgraded += 1;
-                } else {
-                    ns.print("Can't buy upgrade yet, will try again.");
+                if (ns.getServerMaxRam(serverName) < ram) {
+                    await upgradeServer(ns, serverName, ram);
                 }
-                await ns.sleep(1e3);
+                serversUpgraded += 1;
+            } else {
+                ns.print("Can't buy upgrade yet, will try again.");
             }
-        }
-
-
-        if (ramPotency >= serversMaxRamPotency) {
-            ns.print("Servers upgraded to maximum Ram.");
-            break;
+            await ns.sleep(1e3);
         }
         await ns.sleep(1e3);
     }
