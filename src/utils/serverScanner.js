@@ -18,3 +18,23 @@ export function listHackedServersByMaxMoney(ns) {
 
 	return targets;
 }
+
+/** @param {import(".").NS} ns */
+export function getAllServers(ns) {
+    let servers = collectServers(ns, 'home', []);
+    servers = servers.filter(s => ns.hasRootAccess(s));
+    servers.push.apply(servers, ns.getPurchasedServers());
+    return servers;
+}
+
+/** @param {import(".").NS} ns */
+export function selectBestTarget(ns) {
+    let potentialTargets = listHackedServersByMaxMoney(ns);
+    for (let i in potentialTargets) {
+        if (ns.getServerRequiredHackingLevel(potentialTargets[i]) <= ns.getHackingLevel() / 3) {
+            return potentialTargets[i];
+        }
+    }
+    
+}
+
