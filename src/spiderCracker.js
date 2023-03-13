@@ -1,5 +1,5 @@
 import { logFile } from "./utils/logWriter.js";
-import { collectServers } from "./utils/scanServers.js";
+import { collectServers } from "./utils/serverScanner.js";
 
 /** @param {import(".").NS} ns */
 export function crackServer(ns, target) {
