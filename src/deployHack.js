@@ -1,14 +1,6 @@
 import { argParser } from './utils/argParser.js';
-import { collectServers, listHackedServersByMaxMoney } from './utils/serverScanner.js';
-
-/** @param {import(".").NS} ns */
-function _getAllServers(ns) {
-    let servers = collectServers(ns, 'home', []);
-    servers = servers.filter(s => ns.hasRootAccess(s));
-    servers.push.apply(servers, ns.getPurchasedServers());
-    return servers;
-}
-
+import { readLog } from './utils/logManager.js';
+import { getAllServers, selectBestTarget } from './utils/serverScanner.js';
 /** @param {import(".").NS} ns */
 export function deployScripts(ns, args) {
     let server = args[0];
@@ -42,7 +34,7 @@ function deployOnMultipleServers(ns, args) {
     if (filter) {
         servers = filter;
     } else {
-        servers = _getAllServers(ns)
+        servers = getAllServers(ns)
     }
 
     for (let i in servers) {
@@ -53,7 +45,7 @@ function deployOnMultipleServers(ns, args) {
 
 /** @param {import(".").NS} ns */
 function deployMultipleTargetsOnPrivateServers(ns, args) {
-    let servers = ns.getPurchasedServers();
+    let servers = ns.getPurchasedServers()
     let targets = args;
 
     for (let i in targets) {
@@ -63,15 +55,17 @@ function deployMultipleTargetsOnPrivateServers(ns, args) {
 }
 
 /** @param {import(".").NS} ns */
-function deployOnBestTargets(ns, args) {
-    let servers = ns.getPurchasedServers();
-    let targets = listHackedServersByMaxMoney(ns);
+function deployOnBestTarget(ns) {
+    let servers = getAllServers(ns);
+    let target = selectBestTarget(ns);
 
     for (let i in servers) {
-        let deployArgs = [servers[i], targets[i]];
-        deployScripts(ns, deployArgs);
+        let deployArgs = [servers[i], target]
+        deployScripts(ns, deployArgs)
     }
 }
+
+
 export function autocomplete(data) {
     return [...data.servers, ...data.scripts,]
 }
@@ -82,7 +76,7 @@ export async function main(ns) {
         's': deployOnMultipleServers,
         'o': deployScripts,
         't': deployMultipleTargetsOnPrivateServers,
-        'max': deployOnBestTargets
+        'max': deployOnBestTarget
     }
     let args = argParser(ns.args);
     if (args) {
@@ -91,13 +85,13 @@ export async function main(ns) {
         }
     }
     else {
-        ns.tprint(
-            "\
-            Meant to be used with the following arguments: \n \
-            \t --s\n \
-            \t --t\n \
-            \t --o\
-            ")
+        ns.tprint("No arguments provided");
+        ns.tprint("Usage: deployHack.js [s|o|t|max] <server> <target>");
+        ns.tprint("--s: deploy target on multiple servers (optionally listed after target) \n \
+        --o: deploy on one server and one target \n \
+        --t: deploy multiple targets on private servers iteratively \n \
+        --max: deploy on all servers with the best target");
+
     }
 
 }
