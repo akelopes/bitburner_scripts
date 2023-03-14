@@ -14,7 +14,7 @@ export async function main(ns) {
         do {
             t = selectBestTarget(ns);
             new_target = t ? t : 'n00dles';
-            await ns.sleep(1e4);
+            await ns.sleep(6e4);
         }
         while (target === new_target);
     }

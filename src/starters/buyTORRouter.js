@@ -7,7 +7,7 @@ export async function main(ns) {
     if (!servers.includes('darkweb')) {
         while (money < 200000) {
             money = ns.getServerMoneyAvailable('home');
-            await ns.sleep(1e3);
+            await ns.sleep(6e4);
         }
         await click(await findRetry(ns, "//div[(@role = 'button') and (contains(., 'City'))]"));
         await click(await findRetry(ns, "//span[@aria-label = 'Alpha Enterprises']"));

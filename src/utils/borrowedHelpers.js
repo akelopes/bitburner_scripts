@@ -1,3 +1,6 @@
+let wnd = eval('window');
+let doc = wnd['document'];
+
 export function checkNsInstance(ns, fnName = "this function") {
     if (!ns.print) throw new Error(`The first argument to ${fnName} should be a 'ns' instance.`);
     return ns;
@@ -28,7 +31,7 @@ export async function autoRetry(ns, fnFunctionThatMayFail, fnSuccessCondition, e
 }
 
 function find(xpath) {
-    return document.evaluate(xpath, document, null, XPathResult
+    return doc.evaluate(xpath, doc, null, XPathResult
             .FIRST_ORDERED_NODE_TYPE,
             null)
         .singleNodeValue;
