@@ -67,7 +67,7 @@ function deployOnBestTarget(ns) {
 
 
 export function autocomplete(data) {
-    return [...data.servers, ...data.scripts,]
+    return [...data.servers, ...data.scripts]
 }
 
 /** @param {import(".").NS} ns */

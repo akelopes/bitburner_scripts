@@ -33,7 +33,7 @@ let doc
 const argsSchema = [
     ['loop', 99999], // Number of times to infiltrate
     ['quiet', false], // Passed through to infiltrate.js
-    ['faction', 'Clarke Incorporated'], // Faction to buy rep for
+    ['faction', 'BitBurners'], // Faction to buy rep for
     ['target', 'MegaCorp'], // Company to target
 ]
 
@@ -141,6 +141,7 @@ export async function main(ns) {
     for (let i = 0; i < args.loop; ++i) {
         await infiltrate(ns, city, target, faction)
     }
+    notifyMe('Infiltration loop finished.')
 }
 
 async function infiltrate(ns, city, target, faction) {
@@ -184,6 +185,10 @@ async function infiltrate(ns, city, target, faction) {
         //       is available on the sidebar, we already lost
         //       our infiltration, right?)
         await ns.sleep(1000)
+        if (find("//button[contains(., 'Start')]")) {
+            ns.run("infilitrate.js", 1, "--start");
+            
+        }
         if (find("//div[(@role = 'button') and (contains(., 'City'))]")) {
             ns.tprint("Infiltration canceled?")
             return;
@@ -224,4 +229,36 @@ async function findRetry(ns, xpath, expectFailure = false, retries = null) {
     } catch (e) {
         if (!expectFailure) throw e;
     }
+}
+
+function notifyMe(message) {
+  // Let's check if the browser supports notifications
+  if (!("Notification" in window)) {
+    alert("This browser does not support desktop notification");
+  }
+
+  // Let's check if the user is okay to get some notification
+  else if (Notification.permission === "granted") {
+    // If it's okay let's create a notification
+    var notification = new Notification(message);
+  }
+
+  // Otherwise, we need to ask the user for permission
+ // So we have to check for NOT 'denied' instead of 'default'
+  else if (Notification.permission !== 'denied') {
+    Notification.requestPermission(function (permission) {
+
+      // Whatever the user answers, we make sure we store the information
+      if(!('permission' in Notification)) {
+        Notification.permission = permission;
+      }
+
+      // If the user is okay, let's create a notification
+      if (permission === "granted") {
+        var notification = new Notification("Hi there!");
+      }
+    });
+  } else {
+    alert(`Permission is ${Notification.permission}`);
+  }
 }
