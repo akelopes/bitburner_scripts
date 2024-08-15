@@ -1,4 +1,4 @@
-import {click, findRetry} from "./utils/borrowedHelpers.js";
+import {click, findRetry} from "../utils/borrowedHelpers.js";
 
 /** @param {import(".").NS} ns */
 export async function main(ns) {

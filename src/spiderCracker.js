@@ -1,4 +1,4 @@
-import { logFile } from "./utils/logWriter.js";
+import { logFile } from "./utils/logManager.js";
 import { collectServers } from "./utils/serverScanner.js";
 
 /** @param {import(".").NS} ns */

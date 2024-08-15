@@ -47,6 +47,6 @@ export async function main(ns) {
     }
     else {
         ns.tprint("No arguments provided");
-        ns.tprint("Usage: info.js --[server|hacking] <server>");
+        ns.tprint("Usage: info.js --[server|money] <server>");
     }
 }
