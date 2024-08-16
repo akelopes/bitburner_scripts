@@ -1,4 +1,5 @@
 import { argParser } from "./utils/argParser";
+import { selectBestTarget } from "./utils/serverScanner";
 
 /** @param {import(".").NS} ns */
 function getMoneyInfo(ns, args) {
@@ -28,6 +29,11 @@ function getServerInfo(ns, args) {
     ns.tprint(`Ports: ${ports}`);
 }
 
+/** @param {import(".").NS} ns */
+function getBestServer(ns) {
+    ns.tprint("Best server: " + selectBestTarget(ns));
+}
+
 export function autocomplete(data) {
     return [...data.servers, ...data.scripts,]
 }
@@ -36,7 +42,8 @@ export function autocomplete(data) {
 export async function main(ns) {
     const argsFn = {
         'money': getMoneyInfo,
-        'server': getServerInfo
+        'server': getServerInfo,
+        'best': getBestServer
     }
 
     let args = argParser(ns.args);

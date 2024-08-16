@@ -12,7 +12,11 @@ export async function main(ns) {
 
     let servers = getAllServers(ns);
     for (let i in servers) {
-        ns.scp(scripts, servers[i], 'home');
+        scripts.forEach(script => {
+            if (!ns.fileExists(script, servers[i])) {
+                ns.scp(script, servers[i], 'home');
+            }
+        });
         await ns.sleep(1e3);
     }
 
