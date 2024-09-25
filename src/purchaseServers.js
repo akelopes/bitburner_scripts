@@ -5,7 +5,7 @@ export async function upgradeServer(ns, serverName, ram) {
     let scriptsRunning = ns.ps(serverName);
     let target = scriptsRunning.length > 0 ? scriptsRunning[0].args[0] : undefined;
 
-    let scripts = ns.ls('home').filter(f => f.startsWith('/remote/'))
+    let scripts = ns.ls('home').filter(f => f.startsWith('remote/'))
 
     ns.killall(serverName);
     ns.deleteServer(serverName);
@@ -46,7 +46,7 @@ export async function main(ns) {
             if (canBuy()) {
                 let serverName = serverPreffix + serversBought;
                 ns.purchaseServer(serverName, ram);
-                let scripts = ns.ls('home').filter(f => f.startsWith('/remote/'))
+                let scripts = ns.ls('home').filter(f => f.startsWith('remote/'))
                 ns.scp(scripts, serverName, 'home');
                 ns.print(`Purchased server ${serverName} with ${ram} GB ram.`)
                 serversBought = ns.getPurchasedServers().length;

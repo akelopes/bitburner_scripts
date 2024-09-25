@@ -15,7 +15,7 @@ export async function main(ns) {
 		if (serverCapacity < 1) {
 			continue;
 		}
-		ns.exec('/remote/weaken.js', servers[i], serverCapacity, ns.args[0]);
+		ns.exec('remote/weaken.js', servers[i], serverCapacity, ns.args[0]);
 	}
     let homeCapacity = Math.floor(ns.getServerMaxRam('home') / 1.75 * 0.75);
     ns.exec('remote/weaken.js', 'home', homeCapacity, ns.args[0]);

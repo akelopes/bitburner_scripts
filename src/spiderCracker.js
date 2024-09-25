@@ -26,7 +26,7 @@ export async function iterateCrawl(ns, servers) {
 		logFile(ns, 'hackedServers.txt', hackedServers.join('\n'))
 	}
 	let hackableServers = servers.filter(e => !ns.hasRootAccess(e) && ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(e));
-	let scripts = ns.ls('home').filter(f => f.startsWith('/remote/'));
+	let scripts = ns.ls('home').filter(f => f.startsWith('remote/'));
 	for (let i in hackableServers) {
 		if (crackServer(ns, hackableServers[i])) {
 			ns.tprintf('%s has been hacked.', hackableServers[i]);

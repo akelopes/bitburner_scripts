@@ -6,7 +6,7 @@ export function deployScripts(ns, args) {
     let server = args[0];
     let target = args[1];
 
-    let scripts = ['/remote/grow.js', '/remote/weaken.js', '/remote/hack.js'];
+    let scripts = ['remote/grow.js', 'remote/weaken.js', 'remote/hack.js'];
 
     ns.killall(server);
     let serverCapacity = Math.floor((ns.getServerMaxRam(server) - ns.getServerUsedRam(server)) / 1.75);

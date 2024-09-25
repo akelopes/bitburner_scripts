@@ -48,7 +48,7 @@ Used to deploy a calculated distribution of grow, weaken and hack commands that 
 money from the targeted server.
 
 Scripts are deployed following an arbitrary proportion of 10 `grow` threads and 2 `weaken` threads for each `hack` thread. The
-max thread capacity of the server being deployed is measured by the script before executing each of the `/remote/` scripts.
+max thread capacity of the server being deployed is measured by the script before executing each of the `remote/` scripts.
 
 Once I reach the end game, I just either `levelUpHacking.js` to maximize hacking skill or
 `run deployHack.js --s harakiri-sushi` followed by `run deployHack.js --max` to maximize profits. After this, I start
