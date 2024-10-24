@@ -8,7 +8,7 @@ export function autocomplete(data) {
 /** @param {import("..").NS} ns */
 export async function main(ns) {
     ns.disableLog('sleep');
-    let scripts = ['remote/hack.js', 'remote/grow.js', 'remote/weaken.js'];
+    let scripts = ['remote/hack.js', 'remote/grow.js', 'remote/weaken.js', 'remote/share.js'];
 
     let servers = getAllServers(ns);
     for (let i in servers) {
@@ -17,7 +17,7 @@ export async function main(ns) {
                 ns.scp(script, servers[i], 'home');
             }
         });
-        await ns.sleep(1e3);
+        await ns.sleep(100);
     }
 
 }
