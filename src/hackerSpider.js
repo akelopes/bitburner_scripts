@@ -19,119 +19,115 @@ export async function main(ns) {
 }
 
 async function redistributeScripts(ns, desiredHackPercent) {
-    let availableServers = getAllServers(ns);
+    const availableServers = getAllServers(ns);
     
     for (const server of availableServers) {
         ns.killall(server);
     }
 
-    availableServers = availableServers.sort((a, b) => 
-        ns.getServerMaxRam(a) - ns.getServerMaxRam(b)
-    );
-
     const totalRamAvailable = availableServers.reduce((sum, server) => {
         return sum + ns.getServerMaxRam(server);
     }, 0);
 
-    ns.print("\n=== Available Resources ===");
-    ns.print(`Total RAM available: ${formatNumber(totalRamAvailable)}GB`);
-    ns.print("Servers sorted by RAM capacity (lowest first):");
-    availableServers.forEach(server => {
-        ns.print(`${server}: ${formatNumber(ns.getServerMaxRam(server))}GB`);
+    const potentialTargets = getAllServers(ns).filter(server => {
+        return ns.getServerMaxMoney(server) > 0 && 
+               ns.getServerRequiredHackingLevel(server) <= ns.getHackingLevel() &&
+               ns.hasRootAccess(server);
     });
 
-    const scriptRam = {
-        grow: ns.getScriptRam("/remote/grow.js"),
-        weaken: ns.getScriptRam("/remote/weaken.js"),
-        hack: ns.getScriptRam("/remote/hack.js")
-    };
+    const targetAnalysis = analyzeTargets(ns, potentialTargets);
+    const selectedTargets = [];
+    let totalRamUsed = 0;
 
-    const potentialTargets = getAllServers(ns)
-        .filter(server => {
-            return ns.getServerMaxMoney(server) > 0 && 
-                   ns.getServerRequiredHackingLevel(server) <= ns.getHackingLevel() &&
-                   ns.hasRootAccess(server);
-        })
-        .map(server => {
-            const idealThreads = calculateRequiredThreads(ns, server, desiredHackPercent);
-            
-            // Calculate total and individual RAM needs
-            const totalRamNeeded = (idealThreads.grow * scriptRam.grow) +
-                                 (idealThreads.weaken * scriptRam.weaken) +
-                                 (idealThreads.hack * scriptRam.hack);
+    ns.print("\n=== Available Resources ===");
+    ns.print(`Total RAM available: ${formatNumber(totalRamAvailable)}GB`);
 
-            const threadRatio = {
-                grow: idealThreads.grow / (idealThreads.grow + idealThreads.weaken + idealThreads.hack),
-                weaken: idealThreads.weaken / (idealThreads.grow + idealThreads.weaken + idealThreads.hack),
-                hack: idealThreads.hack / (idealThreads.grow + idealThreads.weaken + idealThreads.hack)
-            };
-
-            // Calculate available threads based on RAM
-            const totalThreadsPossible = Math.floor(totalRamAvailable / 
-                ((threadRatio.grow * scriptRam.grow) + 
-                 (threadRatio.weaken * scriptRam.weaken) + 
-                 (threadRatio.hack * scriptRam.hack)));
-
-            const scaledThreads = {
-                grow: Math.max(1, Math.floor(totalThreadsPossible * threadRatio.grow)),
-                weaken: Math.max(1, Math.floor(totalThreadsPossible * threadRatio.weaken)),
-                hack: Math.max(1, Math.floor(totalThreadsPossible * threadRatio.hack))
-            };
-
-            const actualRamNeeded = (scaledThreads.grow * scriptRam.grow) +
-                                  (scaledThreads.weaken * scriptRam.weaken) +
-                                  (scaledThreads.hack * scriptRam.hack);
-
-            return {
-                hostname: server,
-                idealThreads,
-                threads: scaledThreads,
+    for (const target of targetAnalysis) {
+        const idealThreads = calculateRequiredThreads(ns, target.hostname, desiredHackPercent);
+        const idealRamNeeded = calculateRamNeeded(ns, idealThreads);
+        
+        // Calculate scaled threads if we can't use ideal threads
+        const remainingRam = totalRamAvailable - totalRamUsed;
+        const threads = remainingRam < idealRamNeeded ? 
+            scaleThreads(ns, idealThreads, remainingRam, idealRamNeeded) : 
+            idealThreads;
+        
+        const actualRamNeeded = calculateRamNeeded(ns, threads);
+        
+        if (actualRamNeeded > 0 && totalRamUsed + actualRamNeeded <= totalRamAvailable) {
+            selectedTargets.push({
+                ...target,
+                threads,
                 ramNeeded: actualRamNeeded,
-                maxMoney: ns.getServerMaxMoney(server),
-                hackChance: ns.hackAnalyzeChance(server),
-                moneyPerSecond: calculateMoneyPerSecond(ns, server, desiredHackPercent),
-                ratio: threadRatio
-            };
-        })
-        .sort((a, b) => b.moneyPerSecond - a.moneyPerSecond);
+                scaledDown: actualRamNeeded < idealRamNeeded
+            });
+            totalRamUsed += actualRamNeeded;
+        }
+    }
 
-    if (potentialTargets.length === 0) {
-        ns.print("\nNo viable targets found!");
+    if (selectedTargets.length === 0) {
+        ns.print("\nNot enough RAM to target any servers!");
         return;
     }
 
-    const target = potentialTargets[0];
-    ns.print(`\n=== Selected Target: ${target.hostname} ===`);
-    ns.print(`Max Money: $${formatNumber(target.maxMoney)}`);
-    ns.print(`Money/Sec: $${formatNumber(target.moneyPerSecond)}`);
-    ns.print(`RAM Needed: ${formatNumber(target.ramNeeded)}GB`);
-    ns.print("\nThread Ratios:");
-    ns.print(`Grow: ${(target.ratio.grow * 100).toFixed(1)}%`);
-    ns.print(`Weaken: ${(target.ratio.weaken * 100).toFixed(1)}%`);
-    ns.print(`Hack: ${(target.ratio.hack * 100).toFixed(1)}%`);
-    ns.print("\nIdeal Threads:");
-    ns.print(`Grow: ${target.idealThreads.grow}`);
-    ns.print(`Weaken: ${target.idealThreads.weaken}`);
-    ns.print(`Hack: ${target.idealThreads.hack}`);
-    ns.print("\nScaled Threads (maintaining ratios):");
-    ns.print(`Grow: ${target.threads.grow}`);
-    ns.print(`Weaken: ${target.threads.weaken}`);
-    ns.print(`Hack: ${target.threads.hack}`);
+    ns.print(`\n=== Selected Targets (${selectedTargets.length}) ===`);
+    selectedTargets.forEach((target, index) => {
+        ns.print(`\n${index + 1}. ${target.hostname}${target.scaledDown ? ' (Scaled Down)' : ''}`);
+        ns.print(`   Max Money: $${formatNumber(target.maxMoney)}`);
+        ns.print(`   Money/Sec: $${formatNumber(target.moneyPerSecond)}`);
+        ns.print(`   RAM Needed: ${formatNumber(target.ramNeeded)}GB`);
+        if (target.scaledDown) {
+            ns.print(`   Threads: H:${target.threads.hack} G:${target.threads.grow} W:${target.threads.weaken}`);
+        }
+    });
 
     const serverRamUsage = new Map(availableServers.map(server => [server, 0]));
-    await distributeThreads(ns, target.hostname, target.threads, availableServers, serverRamUsage);
+
+    for (const target of selectedTargets) {
+        ns.print(`\n=== Distributing threads for ${target.hostname} ===`);
+        await distributeThreads(ns, target.hostname, target.threads, availableServers, serverRamUsage);
+    }
 
     ns.print(`\n=== Final Status ===`);
-    ns.print(`RAM Used: ${formatNumber(target.ramNeeded)}GB of ${formatNumber(totalRamAvailable)}GB`);
+    ns.print(`Total RAM Used: ${formatNumber(totalRamUsed)}GB of ${formatNumber(totalRamAvailable)}GB`);
+    ns.print(`Total Targets: ${selectedTargets.length}`);
 }
 
-function calculateMoneyPerSecond(ns, server, desiredHackPercent) {
-    const maxMoney = ns.getServerMaxMoney(server);
-    const hackChance = ns.hackAnalyzeChance(server);
-    const hackTime = ns.getHackTime(server);
-    const moneyPerHack = maxMoney * desiredHackPercent;
-    const timePerCycle = hackTime * 4;
-    return (moneyPerHack * hackChance) / (timePerCycle / 1000);
+function scaleThreads(ns, idealThreads, availableRam, idealRamNeeded) {
+    const scaleFactor = availableRam / idealRamNeeded;
+    
+    // Ensure we have at least 1 thread for each operation type
+    return {
+        hack: Math.max(1, Math.floor(idealThreads.hack * scaleFactor)),
+        grow: Math.max(1, Math.floor(idealThreads.grow * scaleFactor)),
+        weaken: Math.max(1, Math.floor(idealThreads.weaken * scaleFactor))
+    };
+}
+
+// [Rest of the functions remain unchanged]
+function analyzeTargets(ns, servers) {
+    return servers.map(hostname => {
+        const maxMoney = ns.getServerMaxMoney(hostname);
+        const minSecurity = ns.getServerMinSecurityLevel(hostname);
+        const hackTime = ns.getHackTime(hostname);
+        const growthRate = ns.getServerGrowth(hostname);
+        const hackChance = ns.hackAnalyzeChance(hostname);
+        
+        const moneyPerHack = maxMoney * 0.5;
+        const timePerCycle = hackTime * 4;
+        const moneyPerSecond = (moneyPerHack * hackChance) / (timePerCycle / 1000);
+
+        return {
+            hostname,
+            maxMoney,
+            minSecurity,
+            hackTime,
+            growthRate,
+            hackChance,
+            moneyPerSecond,
+            score: moneyPerSecond * hackChance * (growthRate / minSecurity)
+        };
+    }).sort((a, b) => b.score - a.score);
 }
 
 async function distributeThreads(ns, target, threads, availableServers, serverRamUsage) {
@@ -141,107 +137,35 @@ async function distributeThreads(ns, target, threads, availableServers, serverRa
         hack: "/remote/hack.js"
     };
 
-    // Calculate total threads and create a queue of all threads needed
-    const threadQueue = [];
-    
-    if (threads.hack > 0) {
-        threadQueue.push({
-            name: scripts.hack,
-            threads: threads.hack,
-            ramPerThread: ns.getScriptRam(scripts.hack),
-            priority: 1
-        });
-    }
+    const tasks = [
+        { name: scripts.weaken, threads: threads.weaken, ramPerThread: ns.getScriptRam(scripts.weaken) },
+        { name: scripts.grow, threads: threads.grow, ramPerThread: ns.getScriptRam(scripts.grow) },
+        { name: scripts.hack, threads: threads.hack, ramPerThread: ns.getScriptRam(scripts.hack) }
+    ];
 
-    if (threads.weaken > 0) {
-        threadQueue.push({
-            name: scripts.weaken,
-            threads: threads.weaken,
-            ramPerThread: ns.getScriptRam(scripts.weaken),
-            priority: 2
-        });
-    }
-    
-    if (threads.grow > 0) {
-        threadQueue.push({
-            name: scripts.grow,
-            threads: threads.grow,
-            ramPerThread: ns.getScriptRam(scripts.grow),
-            priority: 3
-        });
-    }
-
-    // Sort by priority (hack first, then weaken, then grow)
-    threadQueue.sort((a, b) => a.priority - b.priority);
-
-    // First pass: Allocate hack threads to smallest servers that can fit them
-    const smallestServer = availableServers[0];
-    const hackRamPerThread = ns.getScriptRam(scripts.hack);
-    const smallestServerRam = ns.getServerMaxRam(smallestServer);
-    const threadsPerSmallServer = Math.floor(smallestServerRam / hackRamPerThread);
-
-    // If hack threads can fit on smallest servers, prioritize that
-    if (threadsPerSmallServer > 0) {
-        for (const task of threadQueue) {
-            if (task.name === scripts.hack) {
-                let remainingHackThreads = task.threads;
-                for (const server of availableServers) {
-                    if (remainingHackThreads <= 0) break;
-                    
-                    const serverMaxRam = ns.getServerMaxRam(server);
-                    const possibleThreads = Math.floor(serverMaxRam / task.ramPerThread);
-                    const threadsToUse = Math.min(possibleThreads, remainingHackThreads);
-
-                    if (threadsToUse > 0) {
-                        const pid = ns.exec(task.name, server, threadsToUse, target);
-                        if (pid > 0) {
-                            remainingHackThreads -= threadsToUse;
-                            task.threads -= threadsToUse;
-                            serverRamUsage.set(server, threadsToUse * task.ramPerThread);
-                            ns.print(`Launched ${threadsToUse} hack threads on ${server}`);
-                        }
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    // Second pass: Distribute remaining threads
-    let remainingThreads = threadQueue.reduce((sum, task) => sum + task.threads, 0);
-    let lastRemainingThreads = Infinity;
-
-    while (remainingThreads > 0 && remainingThreads < lastRemainingThreads) {
-        lastRemainingThreads = remainingThreads;
-
+    for (const task of tasks) {
+        let remainingThreads = task.threads;
+        
         for (const server of availableServers) {
+            if (remainingThreads <= 0) break;
+
             const serverMaxRam = ns.getServerMaxRam(server);
-            let serverAvailableRam = serverMaxRam - (serverRamUsage.get(server) || 0);
+            const currentUsage = serverRamUsage.get(server) || 0;
+            const availableRam = serverMaxRam - currentUsage;
+            const possibleThreads = Math.floor(availableRam / task.ramPerThread);
+            const threadsToUse = Math.min(possibleThreads, remainingThreads);
 
-            for (const task of threadQueue) {
-                if (task.threads <= 0) continue;
-
-                const possibleThreads = Math.floor(serverAvailableRam / task.ramPerThread);
-                const threadsToUse = Math.min(possibleThreads, task.threads);
-
-                if (threadsToUse > 0) {
-                    const pid = ns.exec(task.name, server, threadsToUse, target);
-                    if (pid > 0) {
-                        task.threads -= threadsToUse;
-                        remainingThreads -= threadsToUse;
-                        serverAvailableRam -= threadsToUse * task.ramPerThread;
-                        serverRamUsage.set(server, serverMaxRam - serverAvailableRam);
-                        ns.print(`Launched ${threadsToUse} threads of ${task.name} on ${server}`);
-                    }
+            if (threadsToUse > 0) {
+                const pid = ns.exec(task.name, server, threadsToUse, target);
+                if (pid > 0) {
+                    remainingThreads -= threadsToUse;
+                    serverRamUsage.set(server, currentUsage + (threadsToUse * task.ramPerThread));
                 }
             }
         }
-    }
 
-    // Report any unallocated threads
-    for (const task of threadQueue) {
-        if (task.threads > 0) {
-            ns.print(`WARNING: Could not allocate all threads for ${task.name}. ${task.threads} threads remaining.`);
+        if (remainingThreads > 0) {
+            ns.print(`WARNING: Could not allocate all threads for ${task.name}. ${remainingThreads} threads remaining.`);
         }
     }
 }
@@ -275,6 +199,12 @@ function calculateWeakenThreads(ns, target, growThreads) {
 function calculateHackThreads(ns, target, percentToSteal) {
     const hackAmount = ns.hackAnalyze(target);
     return Math.ceil(percentToSteal / hackAmount);
+}
+
+function calculateRamNeeded(ns, threads) {
+    return (threads.grow * ns.getScriptRam("/remote/grow.js")) +
+           (threads.weaken * ns.getScriptRam("/remote/weaken.js")) +
+           (threads.hack * ns.getScriptRam("/remote/hack.js"));
 }
 
 function formatNumber(num) {
