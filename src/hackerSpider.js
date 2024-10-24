@@ -96,7 +96,7 @@ async function redistributeScripts(ns, desiredHackPercent) {
 }
 
 async function deployShareThreads(ns, availableServers, serverRamUsage) {
-    const shareScript = "/remote/share.js";
+    const shareScript = "remote/share.js";
     const shareRamCost = ns.getScriptRam(shareScript);
     let totalShareThreads = 0;
 
