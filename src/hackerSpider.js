@@ -42,11 +42,12 @@ async function redistributeScripts(ns, desiredHackPercent) {
     ns.print("\n=== Available Resources ===");
     ns.print(`Total RAM available: ${formatNumber(totalRamAvailable)}GB`);
 
+    const serverRamUsage = new Map(availableServers.map(server => [server, 0]));
+
     for (const target of targetAnalysis) {
         const idealThreads = calculateRequiredThreads(ns, target.hostname, desiredHackPercent);
         const idealRamNeeded = calculateRamNeeded(ns, idealThreads);
         
-        // Calculate scaled threads if we can't use ideal threads
         const remainingRam = totalRamAvailable - totalRamUsed;
         const threads = remainingRam < idealRamNeeded ? 
             scaleThreads(ns, idealThreads, remainingRam, idealRamNeeded) : 
@@ -67,6 +68,7 @@ async function redistributeScripts(ns, desiredHackPercent) {
 
     if (selectedTargets.length === 0) {
         ns.print("\nNot enough RAM to target any servers!");
+        await deployShareThreads(ns, availableServers, serverRamUsage);
         return;
     }
 
@@ -81,22 +83,48 @@ async function redistributeScripts(ns, desiredHackPercent) {
         }
     });
 
-    const serverRamUsage = new Map(availableServers.map(server => [server, 0]));
-
     for (const target of selectedTargets) {
         ns.print(`\n=== Distributing threads for ${target.hostname} ===`);
         await distributeThreads(ns, target.hostname, target.threads, availableServers, serverRamUsage);
     }
+
+    await deployShareThreads(ns, availableServers, serverRamUsage);
 
     ns.print(`\n=== Final Status ===`);
     ns.print(`Total RAM Used: ${formatNumber(totalRamUsed)}GB of ${formatNumber(totalRamAvailable)}GB`);
     ns.print(`Total Targets: ${selectedTargets.length}`);
 }
 
+async function deployShareThreads(ns, availableServers, serverRamUsage) {
+    const shareScript = "/remote/share.js";
+    const shareRamCost = ns.getScriptRam(shareScript);
+    let totalShareThreads = 0;
+
+    ns.print("\n=== Deploying Share Threads ===");
+
+    for (const server of availableServers) {
+        const serverMaxRam = ns.getServerMaxRam(server);
+        const currentUsage = serverRamUsage.get(server) || 0;
+        const availableRam = serverMaxRam - currentUsage;
+        const possibleThreads = Math.floor(availableRam / shareRamCost);
+
+        if (possibleThreads > 0) {
+            const pid = ns.exec(shareScript, server, possibleThreads);
+            if (pid > 0) {
+                totalShareThreads += possibleThreads;
+                serverRamUsage.set(server, currentUsage + (possibleThreads * shareRamCost));
+            }
+        }
+    }
+
+    if (totalShareThreads > 0) {
+        ns.print(`Deployed ${totalShareThreads} share threads across available servers`);
+    }
+}
+
 function scaleThreads(ns, idealThreads, availableRam, idealRamNeeded) {
     const scaleFactor = availableRam / idealRamNeeded;
     
-    // Ensure we have at least 1 thread for each operation type
     return {
         hack: Math.max(1, Math.floor(idealThreads.hack * scaleFactor)),
         grow: Math.max(1, Math.floor(idealThreads.grow * scaleFactor)),
@@ -104,7 +132,6 @@ function scaleThreads(ns, idealThreads, availableRam, idealRamNeeded) {
     };
 }
 
-// [Rest of the functions remain unchanged]
 function analyzeTargets(ns, servers) {
     return servers.map(hostname => {
         const maxMoney = ns.getServerMaxMoney(hostname);

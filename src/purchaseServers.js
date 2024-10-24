@@ -77,8 +77,6 @@ export async function main(ns) {
                     await upgradeServer(ns, serverName, ram);
                 }
                 serversUpgraded += 1;
-            } else {
-                ns.print("Can't buy upgrade yet, will try again.");
             }
             await ns.sleep(1e3);
         }
