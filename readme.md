@@ -20,7 +20,7 @@ The core workflow is now:
    - `crackerSpider.js` for getting rootAccess 
    - `hackerSpider.js` for optimizing the hack loop
    - `purchaseServers.js` for private server purchasing
-   - `starters/buyTORRouter.js` to automate the purachase of TOR Router, which then triggers the automation of Executables purchase.
+   - `starters/buyTORRouter.js` to automate the purchase of TOR Router, which then triggers the automation of Executables purchase.
 
 After this, I just start with mugging, then faction rep farming once available.
 
@@ -35,7 +35,7 @@ The primary entry point for the system:
 ```javascript
 run 01.js
 ```
-This single command initializes the core scritps and begins automated operations.
+This single command initializes the core scripts and begins automated operations.
 
 #### hackerSpider.js
 Advanced resource management that:
